@@ -43,3 +43,51 @@ def test_cte_e_permitida():
 def test_comandos_perigosos_sao_bloqueados(sql):
     with pytest.raises(SQLInvalido):
         validar_sql(sql)
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "SELECT pg_sleep(60)",
+        "SELECT pg_read_file('/etc/passwd')",
+        "SELECT lo_import('/etc/passwd')",
+        "SELECT * FROM dblink('x', 'y') AS t(a int)",
+        "SELECT categoria FROM despesas WHERE pg_sleep(10) IS NOT NULL",
+    ],
+)
+def test_funcoes_perigosas_sao_bloqueadas(sql):
+    with pytest.raises(SQLInvalido, match="Função não permitida"):
+        validar_sql(sql)
+
+
+def test_funcoes_comuns_continuam_permitidas():
+    validar_sql("SELECT uf, SUM(valor_liquido), COUNT(*) FROM despesas GROUP BY uf")
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "WITH d AS (DELETE FROM despesas RETURNING *) SELECT * FROM d",
+        "WITH u AS (UPDATE despesas SET valor_liquido = 0 RETURNING id) SELECT COUNT(*) FROM u",
+        "WITH i AS (INSERT INTO deputados (id, nome) VALUES (1, 'x') RETURNING id) "
+        "SELECT * FROM i",
+        "SELECT * INTO despesas FROM deputados",
+        "SELECT * FROM despesas FOR UPDATE",
+        "SELECT * FROM despesas FOR SHARE",
+    ],
+)
+def test_escrita_ou_bloqueio_escondidos_no_select_sao_bloqueados(sql):
+    with pytest.raises(SQLInvalido):
+        validar_sql(sql)
+
+
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "SELECT set_config('statement_timeout', '0', false)",
+        "SELECT current_setting('data_directory')",
+    ],
+)
+def test_funcoes_de_configuracao_sao_bloqueadas(sql):
+    with pytest.raises(SQLInvalido, match="Função não permitida"):
+        validar_sql(sql)

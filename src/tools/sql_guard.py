@@ -3,6 +3,8 @@
 Regras (spec 00, P3):
 - apenas um comando, e ele precisa ser SELECT;
 - apenas tabelas permitidas;
+- nenhuma escrita ou bloqueio escondido no SELECT (CTE com DELETE/UPDATE, INTO, FOR UPDATE);
+- nenhuma função de sistema (pg_*, dblink*, lo_*, set_config, current_setting);
 - sempre com LIMIT (adicionado ou reduzido até o máximo configurado).
 """
 
@@ -10,6 +12,11 @@ import sqlglot
 from sqlglot import exp
 
 TABELAS_PERMITIDAS = {"deputados", "despesas"}
+PREFIXOS_FUNCOES_PROIBIDAS = ("pg_", "dblink", "lo_", "set_config", "current_setting")
+NOS_PROIBIDOS = (
+    exp.Insert, exp.Update, exp.Delete, exp.Merge, exp.Create, exp.Drop, exp.Command,
+    exp.Into, exp.Lock,
+)
 
 
 class SQLInvalido(ValueError):
@@ -29,6 +36,17 @@ def validar_sql(sql: str, limite_maximo: int = 200) -> str:
     consulta = comandos[0]
     if not isinstance(consulta, exp.Select):
         raise SQLInvalido("Apenas consultas SELECT são permitidas.")
+
+    no_proibido = consulta.find(*NOS_PROIBIDOS)
+    if no_proibido is not None:
+        raise SQLInvalido(
+            f"Apenas leitura é permitida: a consulta contém {no_proibido.key.upper()}."
+        )
+
+    for funcao in consulta.find_all(exp.Func):
+        nome = (funcao.name if isinstance(funcao, exp.Anonymous) else funcao.sql_name()).lower()
+        if nome.startswith(PREFIXOS_FUNCOES_PROIBIDAS):
+            raise SQLInvalido(f"Função não permitida: {nome}")
 
     nomes_cte = {cte.alias for cte in consulta.find_all(exp.CTE)}
     tabelas = {t.name for t in consulta.find_all(exp.Table)} - nomes_cte
