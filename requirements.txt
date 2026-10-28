@@ -1,0 +1,27 @@
+# API e demo
+fastapi>=0.110
+uvicorn[standard]>=0.29
+streamlit>=1.35
+
+# Configuração e validação
+pydantic>=2.6
+pydantic-settings>=2.2
+
+# Banco
+psycopg[binary]>=3.1
+pgvector>=0.2.5
+
+# Validação do SQL gerado pelo LLM
+sqlglot>=23.0
+
+# IA
+sentence-transformers>=2.7
+httpx>=0.27
+
+# Dados e gráficos
+pandas>=2.2
+plotly>=5.20
+
+# Desenvolvimento
+pytest>=8.0
+ruff>=0.4

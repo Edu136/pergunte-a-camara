@@ -1,0 +1,22 @@
+# Ambiente e segredos
+.env
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Dados (versionar apenas amostras pequenas, se for o caso)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Modelos baixados e editores
+models/
+.vscode/
+.idea/
+.DS_Store
