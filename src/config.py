@@ -21,12 +21,16 @@ class Settings(BaseSettings):
     llm_provider: Literal["ollama", "openai"] = "ollama"
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b"
+    ollama_num_ctx: int = 8192
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
 
     sql_limite_linhas: int = 200
     sql_timeout_ms: int = 5000
     agente_max_passos: int = 6
+    agente_max_correcoes: int = 2
+    agente_linhas_para_llm: int = 50
+    agente_log_path: str = "logs/agente.jsonl"
 
     @property
     def lista_anos(self) -> list[int]:

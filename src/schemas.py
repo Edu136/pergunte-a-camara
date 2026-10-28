@@ -10,10 +10,14 @@ class Pergunta(BaseModel):
 
 
 class PassoAgente(BaseModel):
-    """Um passo do raciocínio do agente, exibido em tempo real na interface."""
+    """Um passo do raciocínio do agente, exibido em tempo real na interface (ADR-001)."""
 
-    ferramenta: Literal["consultar_sql", "buscar_normas", "detectar_anomalias", "gerar_grafico"]
+    ferramenta: str
     descricao: str
+    entrada: dict[str, Any] = {}
+    saida: str | None = None
+    erro: str | None = None
+    duracao_ms: int = 0
     sucesso: bool = True
 
 
