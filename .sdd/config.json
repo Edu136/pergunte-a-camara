@@ -1,0 +1,36 @@
+{
+  "project": {
+    "name": "pergunte-a-camara"
+  },
+  "stack": {
+    "language": "python",
+    "framework": "fastapi",
+    "test_runner": ["pytest"],
+    "database": ["postgresql", "pgvector"],
+    "ui_library": "streamlit",
+    "orm": null,
+    "package_manager": "pip",
+    "monorepo": false
+  },
+  "conventions": {
+    "branch_pattern": "{type}/{story-id}-{descricao}",
+    "commit_format": "conventional",
+    "story_id_format": "STORY-{NNN}",
+    "adr_id_format": "ADR-{NNN}"
+  },
+  "security_priority": "high",
+  "extensions": {
+    "ddd": false,
+    "contract_testing": false,
+    "compliance": true,
+    "performance_patterns": false
+  },
+  "mcps": {
+    "git": true,
+    "context7": true,
+    "markitdown": true,
+    "playwright": false,
+    "sonar": false,
+    "dbhub": true
+  }
+}
