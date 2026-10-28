@@ -19,7 +19,7 @@ um gráfico e uma explicação, com cada passo do raciocínio do agente visível
 
 | Ferramenta | O que faz |
 |---|---|
-| `consultar_sql` | Gera SQL a partir da pergunta, valida (P3) e executa com usuário somente leitura |
+| `consultar_sql` | Recebe o SQL escrito pelo agente ([ADR-001](../docs/adr/ADR-001-agente-escreve-sql-e-passo-detalhado.md)), valida (P3) e executa com usuário somente leitura — [STORY-001](STORY-001/spec.bdd.md) |
 | `buscar_normas` | Busca vetorial nos trechos das normas da CEAP (RAG) |
 | `detectar_anomalias` | Aponta valores fora do padrão por categoria (ex.: z-score ou IQR) |
 | `gerar_grafico` | Escolhe o tipo de gráfico adequado ao formato dos dados |

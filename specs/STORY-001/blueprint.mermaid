@@ -1,0 +1,56 @@
+%% STORY-001 — Loop do agente com consultar_sql e autocorreção
+%% Limites: AGENTE_MAX_PASSOS (chamadas de ferramenta), AGENTE_MAX_CORRECOES (falhas seguidas - 1)
+
+sequenceDiagram
+    autonumber
+    actor U as Usuário
+    participant A as Agente (loop)
+    participant L as ClienteLLM (Ollama)
+    participant G as sql_guard
+    participant DB as Postgres (agente_leitura, READ ONLY)
+    participant R as Registro JSONL
+
+    U->>A: pergunta
+    A->>DB: SELECT DISTINCT categoria (cache; se falhar, segue sem categorias e tenta na próxima pergunta)
+    A->>L: system (schema + regras + categorias) + pergunta + tools
+
+    loop até resposta final, teto de passos ou falhas seguidas esgotadas
+        L-->>A: mensagem (tool_calls ou texto final)
+        alt LLM indisponível ou resposta malformada
+            A-->>U: Resposta respondida=false ("LLM indisponível")
+        else tool_call consultar_sql(sql)
+            A->>G: validar_sql(sql, SQL_LIMITE_LINHAS)
+            alt SQL rejeitado
+                G-->>A: SQLInvalido(motivo)
+                A->>R: passo (sucesso=false, erro)
+                A->>L: resultado da ferramenta: erro → corrigir
+            else SQL válido
+                G-->>A: sql com LIMIT
+                A->>DB: executar (timeout SQL_TIMEOUT_MS)
+                alt banco indisponível (conexão)
+                    DB-->>A: BancoIndisponivel
+                    A->>R: passo (sucesso=false, erro genérico)
+                    A-->>U: Resposta respondida=false ("banco indisponível"), sem nova chamada ao LLM
+                else erro no banco / timeout
+                    DB-->>A: ErroExecucaoSQL(motivo)
+                    A->>R: passo (sucesso=false, erro)
+                    A->>L: resultado da ferramenta: erro → corrigir
+                else sucesso
+                    DB-->>A: linhas
+                    A->>R: passo (sucesso=true, nº linhas)
+                    A->>L: resultado da ferramenta: <dados> até AGENTE_LINHAS_PARA_LLM linhas </dados>
+                end
+            end
+        else ferramenta desconhecida / argumentos inválidos
+            A->>R: passo (sucesso=false, erro)
+            A->>L: resultado da ferramenta: erro
+        else texto final
+            alt houve consulta bem-sucedida
+                A-->>U: Resposta respondida=true (sql e dados da última consulta, explicação, fonte CEAP, passos)
+            else nenhuma consulta bem-sucedida
+                A-->>U: Resposta respondida=false (sem sql nem dados)
+            end
+        end
+    end
+
+    Note over A: Teto de passos ou falhas seguidas > AGENTE_MAX_CORRECOES → Resposta respondida=false com o motivo
