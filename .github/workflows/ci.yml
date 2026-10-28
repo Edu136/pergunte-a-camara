@@ -13,7 +13,7 @@ jobs:
         with:
           python-version: "3.11"
       - name: Instalar dependências leves
-        run: pip install fastapi httpx pydantic pydantic-settings sqlglot pandas pytest ruff
+        run: pip install fastapi httpx pydantic pydantic-settings sqlglot pandas "psycopg[binary]" pytest ruff
       - name: Lint
         run: ruff check .
       - name: Testes
