@@ -1,0 +1,26 @@
+%% STORY-003 — Escolha automática do gráfico (escolher_grafico) a partir dos dados da Resposta
+%% Dimensões: ano, mes, data*, colunas *_id e texto. Medida: numérica (não bool) que não é dimensão.
+
+flowchart TD
+    A[Resposta com dados<br/>respondida = true] --> B{Há linhas?}
+    B -- não --> N[grafico = None]
+    B -- sim --> C[Classificar colunas:<br/>tempo · categoria · medida]
+    C --> D{Há medida?}
+    D -- não --> T[tipo = tabela]
+    D -- sim --> E{Há dimensão?}
+    E -- não, 1 linha --> N
+    E -- não, várias linhas --> T
+    E -- sim --> F{Exatamente 1 dimensão?}
+    F -- não --> T
+    F -- sim, tempo --> G{≥ 2 linhas e um único ano<br/>quando há ano e mes?}
+    G -- sim --> L[tipo = linha<br/>x = tempo, y = 1ª medida]
+    G -- não --> T
+    F -- sim, categoria --> H{Linhas ≤ GRAFICO_MAX_BARRAS?}
+    H -- sim --> BAR[tipo = barra<br/>x = categoria, y = 1ª medida]
+    H -- não --> T
+
+    L --> TIT[Título neutro:<br/>'medida por dimensão']
+    BAR --> TIT
+    T --> TIT
+    TIT --> P[PassoAgente gerar_grafico<br/>descricao: escolha automática]
+    N --> P

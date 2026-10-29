@@ -22,7 +22,7 @@ um gráfico e uma explicação, com cada passo do raciocínio do agente visível
 | `consultar_sql` | Recebe o SQL escrito pelo agente ([ADR-001](../docs/adr/ADR-001-agente-escreve-sql-e-passo-detalhado.md)), valida (P3) e executa com usuário somente leitura — [STORY-001](STORY-001/spec.bdd.md) |
 | `buscar_normas` | Busca vetorial nos trechos das normas da CEAP (RAG) |
 | `detectar_anomalias` | Aponta valores fora do padrão por categoria (ex.: z-score ou IQR) |
-| `gerar_grafico` | Escolhe o tipo de gráfico adequado ao formato dos dados |
+| `gerar_grafico` | Etapa automática (não é ferramenta do LLM — [ADR-002](../docs/adr/ADR-002-grafico-por-regras.md)): escolhe linha, barra ou tabela pelo formato dos dados — [STORY-003](STORY-003/spec.bdd.md) |
 
 ## 4. Fluxo
 
