@@ -19,8 +19,9 @@ sequenceDiagram
         alt LLM indisponível ou resposta malformada
             A-->>U: Resposta respondida=false ("LLM indisponível")
         else tool_call consultar_sql(sql)
+            Note over A: STORY-002: validar_categorias(sql, categorias) — texto inexistente vira SQL rejeitado com sugestões
             A->>G: validar_sql(sql, SQL_LIMITE_LINHAS)
-            alt SQL rejeitado
+            alt SQL rejeitado (guard ou categoria inexistente)
                 G-->>A: SQLInvalido(motivo)
                 A->>R: passo (sucesso=false, erro)
                 A->>L: resultado da ferramenta: erro → corrigir
@@ -38,7 +39,7 @@ sequenceDiagram
                 else sucesso
                     DB-->>A: linhas
                     A->>R: passo (sucesso=true, nº linhas)
-                    A->>L: resultado da ferramenta: <dados> até AGENTE_LINHAS_PARA_LLM linhas </dados>
+                    A->>L: resultado da ferramenta: <dados> até AGENTE_LINHAS_PARA_LLM linhas </dados> (vazio/nulo → \"Nenhum registro encontrado\")
                 end
             end
         else ferramenta desconhecida / argumentos inválidos
