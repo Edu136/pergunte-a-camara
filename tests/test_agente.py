@@ -67,6 +67,11 @@ def _resultados_de_ferramenta(conversa):
     return [m["content"] for m in conversa if m["role"] == "tool"]
 
 
+def _consultas(resposta):
+    """Passos de consultar_sql (o passo automático gerar_grafico fica de fora)."""
+    return [p for p in resposta.passos if p.ferramenta == "consultar_sql"]
+
+
 # --- Happy path ---------------------------------------------------------------------------
 
 def test_h1_pergunta_respondida_com_uma_consulta():
@@ -80,8 +85,8 @@ def test_h1_pergunta_respondida_com_uma_consulta():
     assert resposta.dados == LINHAS_UF
     assert resposta.explicacao == "MG gastou mais."
     assert resposta.fontes == [FONTE_CEAP]
-    assert len(resposta.passos) == 1
-    passo = resposta.passos[0]
+    assert len(_consultas(resposta)) == 1
+    passo = _consultas(resposta)[0]
     assert passo.ferramenta == "consultar_sql" and passo.sucesso is True
     assert passo.entrada == {"sql": SQL_UF} and passo.saida == "2 linhas"
 
@@ -123,7 +128,7 @@ def test_h5_vale_a_ultima_consulta_bem_sucedida():
     resposta = _agente(llm, consultor).responder("Compare UF e categoria")
 
     assert resposta.sql == consultor.executados[1] and resposta.dados == linhas_cat
-    assert [p.entrada["sql"] for p in resposta.passos] == [SQL_UF, SQL_CAT]
+    assert [p.entrada["sql"] for p in _consultas(resposta)] == [SQL_UF, SQL_CAT]
 
 
 def test_h7_categorias_reais_no_prompt_buscadas_uma_vez():
@@ -168,7 +173,7 @@ def test_e3_varias_chamadas_numa_mensagem():
 
     resposta = _agente(llm, ConsultorFalso(LINHAS_UF, [])).responder("Duas coisas")
 
-    assert len(resposta.passos) == 2
+    assert len(_consultas(resposta)) == 2
     assert len(_resultados_de_ferramenta(llm.conversas[1])) == 2
 
 
@@ -296,3 +301,31 @@ def test_story002_x2_categoria_errada_conta_para_o_limite():
 
     assert consultor.executados == []
     assert resposta.respondida is False
+
+
+# --- STORY-003: gráfico ----------------------------------------------------------------------
+
+def test_story003_h3_agente_preenche_grafico_e_registra_o_passo():
+    llm = LLMRoteirizado(sql(SQL_UF), texto("MG gastou mais."))
+
+    resposta = _agente(llm, ConsultorFalso(LINHAS_UF)).responder("Quanto cada UF gastou?")
+
+    assert resposta.grafico.tipo == "barra" and resposta.grafico.eixo_x == "uf"
+    passo = resposta.passos[-1]
+    assert passo.ferramenta == "gerar_grafico" and passo.sucesso is True
+    assert passo.descricao == "Escolha automática do gráfico" and passo.saida == "barra"
+
+
+def test_story003_valor_unico_registra_sem_grafico():
+    llm = LLMRoteirizado(sql("SELECT SUM(valor_liquido) AS total FROM despesas"), texto("ok"))
+
+    resposta = _agente(llm, ConsultorFalso([{"total": 1.0}])).responder("Total?")
+
+    assert resposta.grafico is None and resposta.passos[-1].saida == "sem gráfico"
+
+
+def test_story003_x2_nao_respondida_sem_grafico_nem_passo():
+    resposta = _agente(LLMRoteirizado(texto("Foram R$ 1 milhão.")), ConsultorFalso()).responder("?")
+
+    assert resposta.grafico is None
+    assert all(p.ferramenta != "gerar_grafico" for p in resposta.passos)

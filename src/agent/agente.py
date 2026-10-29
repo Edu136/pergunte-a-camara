@@ -10,8 +10,9 @@ from typing import Any, Protocol
 from src.agent.prompts import FERRAMENTAS, formatar_dados, montar_prompt_sistema
 from src.config import Settings, settings
 from src.llm.cliente import ChamadaFerramenta, ClienteLLM, LLMIndisponivel
-from src.schemas import PassoAgente, Resposta
+from src.schemas import Grafico, PassoAgente, Resposta
 from src.tools.consultar_sql import BancoIndisponivel, ErroExecucaoSQL, ResultadoConsulta
+from src.tools.grafico import escolher_grafico
 from src.tools.sql_guard import SQLInvalido
 from src.tools.validar_categorias import validar_categorias
 
@@ -81,10 +82,15 @@ class Agente:
             if not mensagem.chamadas:
                 if ultimo_sucesso is None:
                     return nao_respondida(SEM_DADOS)
+                grafico, passo = self._escolher_grafico(ultimo_sucesso.linhas)
+                passos.append(passo)
+                if self.registro:
+                    self.registro.registrar(id_pergunta, pergunta, passo)
                 return Resposta(
                     pergunta=pergunta,
                     sql=ultimo_sucesso.sql,
                     dados=ultimo_sucesso.linhas,
+                    grafico=grafico,
                     explicacao=mensagem.conteudo,
                     fontes=[FONTE_CEAP],
                     passos=passos,
@@ -116,6 +122,18 @@ class Agente:
                 falhas_seguidas += 1
                 if falhas_seguidas > self.config.agente_max_correcoes:
                     return nao_respondida(CORRECOES_ESGOTADAS)
+
+    def _escolher_grafico(self, linhas: list[dict[str, Any]]) -> tuple[Grafico | None, PassoAgente]:
+        """Escolha por regras fixas (ADR-002), registrada como passo para a demo e o log."""
+        inicio = time.perf_counter()
+        grafico = escolher_grafico(linhas, self.config.grafico_max_barras)
+        passo = PassoAgente(
+            ferramenta="gerar_grafico",
+            descricao="Escolha automática do gráfico",
+            saida=grafico.tipo if grafico else "sem gráfico",
+            duracao_ms=round((time.perf_counter() - inicio) * 1000),
+        )
+        return grafico, passo
 
     def _listar_categorias(self) -> list[str]:
         """Categorias reais para o prompt, buscadas uma vez. Sem banco, segue sem elas."""

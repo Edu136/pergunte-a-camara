@@ -14,8 +14,10 @@ def test_h6_cada_passo_vira_uma_linha_json(tmp_path):
 
     agente.responder("Quanto por UF?")
 
-    linhas = [json.loads(linha) for linha in caminho.read_text(encoding="utf-8").splitlines()]
+    todas = [json.loads(linha) for linha in caminho.read_text(encoding="utf-8").splitlines()]
+    linhas = [linha for linha in todas if linha["ferramenta"] == "consultar_sql"]
     assert len(linhas) == 2
+    assert todas[-1]["ferramenta"] == "gerar_grafico"
     assert linhas[0]["id_pergunta"] == linhas[1]["id_pergunta"]
     assert all(linha["pergunta"] == "Quanto por UF?" and linha["timestamp"] for linha in linhas)
     assert linhas[0]["sucesso"] is False and linhas[0]["erro"]
@@ -32,4 +34,6 @@ def test_registro_acrescenta_sem_apagar(tmp_path):
     agente.responder("Pergunta um")
     agente.responder("Pergunta dois")
 
-    assert len(caminho.read_text(encoding="utf-8").splitlines()) == 2
+    linhas = [json.loads(linha) for linha in caminho.read_text(encoding="utf-8").splitlines()]
+    assert [linha["pergunta"] for linha in linhas if linha["ferramenta"] == "consultar_sql"] == [
+        "Pergunta um", "Pergunta dois"]
