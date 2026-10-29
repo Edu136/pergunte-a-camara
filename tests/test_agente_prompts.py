@@ -49,3 +49,17 @@ def test_dados_nao_conseguem_fechar_o_delimitador():
     assert texto.count("</dados>") == 1
     bloco = re.search(r"<dados>(.*)</dados>", texto, re.S)
     assert json.loads(bloco.group(1)) == linhas
+
+
+AVISO_VAZIO = "Nenhum registro encontrado: não informe valores"
+
+
+def test_story002_e5_resultado_vazio_ou_nulo_e_sinalizado():
+    assert AVISO_VAZIO in formatar_dados([], limite=3)
+    assert AVISO_VAZIO in formatar_dados([{"total": None}], limite=3)
+    assert AVISO_VAZIO in formatar_dados([{"uf": None, "total": None}] * 2, limite=3)
+
+
+def test_story002_e5_zero_nao_e_vazio():
+    assert AVISO_VAZIO not in formatar_dados([{"total": 0}], limite=3)
+    assert AVISO_VAZIO not in formatar_dados([{"uf": "MG", "total": None}], limite=3)

@@ -13,6 +13,7 @@ from src.llm.cliente import ChamadaFerramenta, ClienteLLM, LLMIndisponivel
 from src.schemas import PassoAgente, Resposta
 from src.tools.consultar_sql import BancoIndisponivel, ErroExecucaoSQL, ResultadoConsulta
 from src.tools.sql_guard import SQLInvalido
+from src.tools.validar_categorias import validar_categorias
 
 log = logging.getLogger(__name__)
 
@@ -145,6 +146,7 @@ class Agente:
             erro = "Argumento obrigatório 'sql' ausente ou vazio."
         else:
             try:
+                validar_categorias(sql, self._categorias or [])
                 resultado = self.consultor.consultar(sql)
                 erro = None
             except (SQLInvalido, ErroExecucaoSQL) as falha:

@@ -66,7 +66,10 @@ def formatar_dados(linhas: list[dict[str, Any]], limite: int) -> str:
     """Resultado da consulta para o modelo: delimitado (P9) e truncado em `limite` linhas."""
     total = len(linhas)
     exibidas = linhas[:limite]
-    if total > limite:
+    if all(valor is None for linha in linhas for valor in linha.values()):
+        # Sem linhas, ou só nulos (ex.: SUM sem registros): o modelo não pode virar isso em número.
+        resumo = "Consulta executada. Nenhum registro encontrado: não informe valores."
+    elif total > limite:
         resumo = f"Consulta executada: mostrando {len(exibidas)} de {total} linhas."
     else:
         resumo = f"Consulta executada: {total} linha{'s' if total != 1 else ''}."

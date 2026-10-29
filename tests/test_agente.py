@@ -268,3 +268,31 @@ def test_x12_banco_indisponivel_encerra_sem_gastar_correcoes():
     assert resposta.respondida is False
     assert "banco de dados está indisponível" in resposta.explicacao
     assert resposta.passos[0].sucesso is False
+
+
+# --- STORY-002: validação de categorias ----------------------------------------------------
+
+SQL_COMB = "SELECT SUM(valor_liquido) AS total FROM despesas WHERE categoria = '{}'"
+COMBUSTIVEIS = "COMBUSTÍVEIS E LUBRIFICANTES."
+
+
+def test_story002_h2_agente_corrige_categoria_pela_sugestao():
+    llm = LLMRoteirizado(sql(SQL_COMB.format("COMBUSTÍVEIS E LUBRIFICANTES")),
+                         sql(SQL_COMB.format(COMBUSTIVEIS)), texto("Pronto."))
+    consultor = ConsultorFalso([{"total": 10.0}], categorias=[COMBUSTIVEIS])
+
+    resposta = _agente(llm, consultor).responder("Gasto com combustíveis?")
+
+    assert len(consultor.executados) == 1
+    assert f"'{COMBUSTIVEIS}'" in _resultados_de_ferramenta(llm.conversas[1])[0]
+    assert resposta.respondida is True and COMBUSTIVEIS in resposta.sql
+
+
+def test_story002_x2_categoria_errada_conta_para_o_limite():
+    llm = LLMRoteirizado(*[sql(SQL_COMB.format("COMBUSTÍVEL"))] * 3)
+    consultor = ConsultorFalso(categorias=[COMBUSTIVEIS])
+
+    resposta = _agente(llm, consultor, agente_max_correcoes=1).responder("Combustível?")
+
+    assert consultor.executados == []
+    assert resposta.respondida is False
