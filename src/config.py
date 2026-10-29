@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     agente_linhas_para_llm: int = 50
     agente_log_path: str = "logs/agente.jsonl"
 
+    grafico_max_barras: int = 20
+
     @property
     def lista_anos(self) -> list[int]:
         return [int(a) for a in self.anos.split(",") if a.strip()]
