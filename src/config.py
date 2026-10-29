@@ -22,6 +22,8 @@ class Settings(BaseSettings):
     ollama_url: str = "http://localhost:11434"
     ollama_model: str = "qwen2.5:7b"
     ollama_num_ctx: int = 8192
+    ollama_timeout_s: float = 300
+    ollama_keep_alive: str = "30m"
     openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
 

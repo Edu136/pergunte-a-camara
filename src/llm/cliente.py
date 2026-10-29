@@ -35,7 +35,11 @@ def criar_cliente(config: Settings) -> ClienteLLM:
         from src.llm.ollama import ClienteOllama
 
         return ClienteOllama(
-            url=config.ollama_url, modelo=config.ollama_model, num_ctx=config.ollama_num_ctx
+            url=config.ollama_url,
+            modelo=config.ollama_model,
+            num_ctx=config.ollama_num_ctx,
+            timeout=config.ollama_timeout_s,
+            keep_alive=config.ollama_keep_alive,
         )
     raise NotImplementedError(
         f"Provedor de LLM '{config.llm_provider}' ainda não está implementado; "

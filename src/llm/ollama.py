@@ -28,11 +28,13 @@ class ClienteOllama:
         modelo: str,
         num_ctx: int,
         http: httpx.Client | None = None,
-        timeout: float = 120,
+        timeout: float = 300,
+        keep_alive: str = "30m",
     ):
         self.url = url.rstrip("/")
         self.modelo = modelo
         self.num_ctx = num_ctx
+        self.keep_alive = keep_alive
         self.http = http or httpx.Client(timeout=timeout)
 
     def conversar(
@@ -43,6 +45,7 @@ class ClienteOllama:
             "messages": mensagens,
             "tools": ferramentas,
             "stream": False,
+            "keep_alive": self.keep_alive,
             "options": {"temperature": 0, "seed": SEED, "num_ctx": self.num_ctx},
         }
         try:

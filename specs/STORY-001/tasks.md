@@ -115,7 +115,7 @@ Task 1 → Task 2 → Task 3 → Task 4 → Task 5 → Task 6 → Task 7 → Tas
 ## Pendências registradas no /review (não bloqueantes)
 
 - [ ] `UNION` é rejeitado pelo guard (limitação funcional; medir impacto na avaliação).
-- [ ] Timeout do httpx fixo em 120 s → mover para `OLLAMA_TIMEOUT_S`.
+- [x] Timeout do httpx fixo em 120 s → `OLLAMA_TIMEOUT_S` (padrão 300 s) e `OLLAMA_KEEP_ALIVE` (padrão 30m). Motivo real: no primeiro teste com o modelo 100% em CPU, a resposta passou de 120 s.
 - [ ] Fakes de teste importados de `tests/test_agente.py` → mover para `tests/conftest.py`.
 - [ ] Texto final vazio após consulta bem-sucedida → definir cenário (hoje `respondida = true` com explicação vazia).
 - [ ] Senhas fixas de desenvolvimento (`init.sql`, `docker-compose`, defaults do `config.py`) → rever antes de qualquer hospedagem.

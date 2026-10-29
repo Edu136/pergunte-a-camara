@@ -89,3 +89,31 @@ def test_resposta_malformada_vira_llm_indisponivel(corpo):
 
     with pytest.raises(LLMIndisponivel, match="resposta inválida"):
         _cliente(responder).conversar([], FERRAMENTAS)
+
+
+def test_mantem_o_modelo_carregado_pelo_tempo_configurado():
+    requisicoes = []
+
+    def responder(request):
+        requisicoes.append(request)
+        return httpx.Response(200, json={"message": {"content": "ok"}})
+
+    http = httpx.Client(transport=httpx.MockTransport(responder))
+    cliente = ClienteOllama(url="http://o", modelo="m", num_ctx=1, http=http, keep_alive="30m")
+    cliente.conversar([], FERRAMENTAS)
+
+    assert json.loads(requisicoes[0].content)["keep_alive"] == "30m"
+
+
+def test_fabrica_usa_timeout_e_keep_alive_da_configuracao():
+    config = Settings(_env_file=None, ollama_timeout_s=300, ollama_keep_alive="30m")
+
+    cliente = criar_cliente(config)
+
+    assert cliente.http.timeout.read == 300
+    assert cliente.keep_alive == "30m"
+
+
+def test_padroes_de_timeout_e_keep_alive():
+    config = Settings(_env_file=None)
+    assert config.ollama_timeout_s == 300 and config.ollama_keep_alive == "30m"
