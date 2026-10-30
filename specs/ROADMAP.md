@@ -14,7 +14,7 @@
 - [x] **Loop de agente próprio com tool use** (Ollama, httpx, Pydantic): teto de passos, saídas estruturadas validadas por schema, registro de cada passo em JSONL. → [spec 01](01-agente-consultas.md)
 - [x] **`consultar_sql`** com schema no prompt e **autocorreção** (até 2 tentativas a partir do erro do guard ou do banco).
 - [x] **`gerar_grafico`**: escolhe o gráfico (linha, barra ou tabela) pelo formato dos dados, por regras fixas ([ADR-002](../docs/adr/ADR-002-grafico-por-regras.md)). → [STORY-003](STORY-003/spec.bdd.md)
-- [ ] **API `POST /perguntar`** com **streaming dos passos** (SSE).
+- [x] **API `POST /perguntar`** com **streaming dos passos** (SSE). → [STORY-004](STORY-004/spec.bdd.md)
 - [ ] **Demo em Streamlit**: passos em tempo real, SQL, gráfico, explicação, fontes e aviso "verifique na fonte oficial".
 
 ## 3. Avaliação (vem antes das demais capacidades de IA)

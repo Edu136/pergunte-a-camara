@@ -82,6 +82,13 @@ uvicorn src.api.main:app --reload
 streamlit run app/streamlit_app.py
 ```
 
+A API responde em `POST /perguntar` e entrega cada passo do agente por Server-Sent Events, seguido
+da resposta final (formato dos eventos em [STORY-004](specs/STORY-004/spec.bdd.md)):
+
+```bash
+curl -N -X POST http://127.0.0.1:8000/perguntar   -H "content-type: application/json" -d '{"texto": "Quanto foi gasto por UF em 2025?"}'
+```
+
 ## Estrutura
 
 ```
