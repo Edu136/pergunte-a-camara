@@ -4,18 +4,19 @@ A página só desenha; a leitura do stream fica em src/api/cliente.py.
 Regras em specs/STORY-005/spec.bdd.md e fluxo no blueprint.
 """
 
+import re
 import sys
 from pathlib import Path
 
 # `streamlit run` põe só app/ no sys.path; a raiz do repositório é necessária para `import src`.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import streamlit as st  # noqa: E402
-from pydantic import ValidationError  # noqa: E402
+import streamlit as st
+from pydantic import ValidationError
 
-from src.api import cliente  # noqa: E402
-from src.schemas import Grafico, PassoAgente, Pergunta, Resposta  # noqa: E402
-from src.tools.grafico import TITULO_TABELA, montar_figura  # noqa: E402
+from src.api import cliente
+from src.schemas import Grafico, PassoAgente, Pergunta, Resposta
+from src.tools.grafico import TITULO_TABELA, montar_figura
 
 PERGUNTAS_EXEMPLO = [
     "Quanto foi gasto por UF em 2025?",
@@ -28,11 +29,13 @@ AVISO_FONTE = "Verifique na fonte oficial antes de usar estes números."
 EM_ANDAMENTO = "Consultando os dados…"
 CONCLUIDO = "Concluído"
 NAO_CONCLUIDO = "Não foi possível concluir"
+PONTUACAO_ASCII = re.compile(r"([!-/:-@\[-`{-~])")
 
 
 def escapar(texto: str) -> str:
-    """Evita que valores em reais ("R$ 10 e R$ 20") virem fórmula LaTeX no markdown."""
-    return texto.replace("$", r"\$")
+    """Escapa toda a pontuação ASCII para o markdown exibir o texto como veio: sem links, imagens,
+    fórmulas ("R$ 10 e R$ 20") nem formatação vindos do LLM ou do banco."""
+    return PONTUACAO_ASCII.sub(r"\\\1", texto)
 
 
 def linha_do_passo(passo: PassoAgente) -> str:
@@ -43,7 +46,7 @@ def linha_do_passo(passo: PassoAgente) -> str:
 
 
 def desenhar_passo(passo: PassoAgente) -> None:
-    st.markdown(escapar(linha_do_passo(passo)))
+    st.text(linha_do_passo(passo))
     if sql := passo.entrada.get("sql"):
         st.code(sql, language="sql")
 
@@ -58,7 +61,7 @@ def desenhar_resposta(resposta: Resposta) -> None:
     if not resposta.respondida:
         st.warning(escapar(resposta.explicacao))
         return
-    st.markdown(escapar(resposta.explicacao))
+    st.text(resposta.explicacao)  # texto do LLM: sem markdown, links nem imagens
     grafico = resposta.grafico
     if grafico and grafico.tipo in ("linha", "barra"):
         st.plotly_chart(montar_figura(grafico, resposta.dados))
@@ -69,7 +72,7 @@ def desenhar_resposta(resposta: Resposta) -> None:
     if resposta.sql:
         st.code(resposta.sql, language="sql")
     for fonte in resposta.fontes:
-        st.markdown(f"Fonte: {escapar(fonte)}")
+        st.markdown(f"Fonte: {fonte}")  # constante do agente; em markdown para virar link
     st.info(AVISO_FONTE)
 
 

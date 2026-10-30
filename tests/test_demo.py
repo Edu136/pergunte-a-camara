@@ -84,7 +84,7 @@ def test_h6_passos_com_resultado_duracao_e_sql(pagina):
     enviar(at)
 
     (status,) = at.status
-    linhas = textos(status.markdown)
+    linhas = textos(status.text)
     assert "✅ Consulta ao banco de dados: 2 linhas (1,2 s)" in linhas
     assert "✅ Escolha automática do gráfico: barra (0,0 s)" in linhas
     assert SQL in textos(status.code)
@@ -96,7 +96,7 @@ def test_h3_resposta_com_grafico_de_barras(pagina):
 
     enviar(at)
 
-    assert "MG gastou mais." in textos(at.markdown)
+    assert "MG gastou mais." in textos(at.text)
     assert [f["data"][0]["type"] for f in figuras(at)] == ["bar", "table"]
     assert textos(at.code).count(SQL) == 2  # no passo e na resposta
     assert any(FONTE in texto for texto in textos(at.markdown))
@@ -125,7 +125,7 @@ def test_e2_valor_unico_mostra_so_a_tabela(pagina):
     enviar(at)
 
     assert [f["data"][0]["type"] for f in figuras(at)] == ["table"]
-    assert "MG gastou mais." in textos(at.markdown)
+    assert "MG gastou mais." in textos(at.text)
 
 
 def test_e3_resposta_nao_respondida_vira_so_aviso(pagina):
@@ -137,19 +137,44 @@ def test_e3_resposta_nao_respondida_vira_so_aviso(pagina):
 
     enviar(at)
 
-    assert textos(at.warning) == [explicacao]
+    assert textos(at.warning) == [r"Não foi possível responder com os dados disponíveis\."]
     assert not figuras(at) and not at.code and not at.info
     assert not any("camara.leg.br" in texto for texto in textos(at.markdown))
 
 
 def test_e4_valores_em_reais_nao_viram_formula(pagina):
     at, falso = pagina
-    falso.eventos = [RespostaRecebida(resposta(explicacao="MG gastou R$ 10,00 e SP R$ 20,00."))]
+    explicacao = "MG gastou R$ 10,00 e SP R$ 20,00."
+    falso.eventos = [RespostaRecebida(resposta(explicacao=explicacao))]
     at.run()
 
     enviar(at)
 
-    assert r"MG gastou R\$ 10,00 e SP R\$ 20,00." in textos(at.markdown)
+    assert explicacao in textos(at.text)  # texto puro: sem LaTeX
+    assert not any("R$" in texto for texto in textos(at.markdown))
+
+
+def test_x4_links_e_imagens_do_llm_nao_viram_markdown(pagina):
+    at, falso = pagina
+    injetado = "Veja [o site](http://exemplo.invalid) ![](http://exemplo.invalid/p.png) e http://exemplo.invalid"
+    falso.eventos = [RespostaRecebida(resposta(explicacao=injetado))]
+    at.run()
+
+    enviar(at)
+
+    assert injetado in textos(at.text)
+    assert not any("exemplo.invalid" in texto for texto in textos(at.markdown))
+
+
+def test_x4_aviso_nao_respondido_escapa_links(pagina):
+    at, falso = pagina
+    falso.eventos = [RespostaRecebida(Resposta(pergunta=PERGUNTA, respondida=False,
+                                               explicacao="[clique](http://exemplo.invalid)"))]
+    at.run()
+
+    enviar(at)
+
+    assert textos(at.warning) == [r"\[clique\]\(http\:\/\/exemplo\.invalid\)"]
 
 
 def test_e5_interagir_com_a_pagina_nao_refaz_a_pergunta(pagina):
@@ -160,9 +185,9 @@ def test_e5_interagir_com_a_pagina_nao_refaz_a_pergunta(pagina):
     at.run()
 
     assert falso.chamadas == [PERGUNTA]
-    assert "MG gastou mais." in textos(at.markdown)
+    assert "MG gastou mais." in textos(at.text)
     assert [f["data"][0]["type"] for f in figuras(at)] == ["bar", "table"]
-    assert "✅ Consulta ao banco de dados: 2 linhas (1,2 s)" in textos(at.status[0].markdown)
+    assert "✅ Consulta ao banco de dados: 2 linhas (1,2 s)" in textos(at.status[0].text)
 
 
 def test_e6_perguntas_de_exemplo_neutras_e_validas(pagina):
@@ -200,6 +225,6 @@ def test_x3_falha_depois_de_um_passo_preserva_o_passo(pagina):
     assert textos(at.error) == [FALHA_GENERICA]
     (status,) = at.status
     assert status.label == "Não foi possível concluir"
-    assert "✅ Consulta ao banco de dados: 2 linhas (1,2 s)" in textos(status.markdown)
+    assert "✅ Consulta ao banco de dados: 2 linhas (1,2 s)" in textos(status.text)
     assert not figuras(at) and not at.info
     assert textos(at.code) == [SQL]  # só o do passo

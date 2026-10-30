@@ -1,7 +1,7 @@
 # Spec BDD: STORY-005 — Demo em Streamlit com os passos do agente em tempo real
 
 > **Story**: [story.md](story.md) · **Análise**: [analysis.md](analysis.md) · **Fluxo**: [blueprint.mermaid](blueprint.mermaid)
-> **Status**: Approved (sincronizada após TDD; /review pendente)
+> **Status**: Approved (sincronizada após TDD e /review)
 > **Autor**: Edu136
 > **Revisores**: —
 
@@ -51,8 +51,14 @@ mensagem amigável se algo falhar.
    - o aviso `AVISO_FONTE` = `"Verifique na fonte oficial antes de usar estes números."`.
 9. **RN9 — Resposta não respondida:** só a explicação, como aviso. Sem gráfico, tabela, SQL,
    fontes nem `AVISO_FONTE`.
-10. **RN10 — Explicação segura:** o `$` da explicação é escapado (`\$`) para não virar LaTeX, e o
-    HTML continua desligado.
+10. **RN10 — Texto não confiável sem formatação:**
+    - **Explicação de resposta respondida e linhas dos passos:** vêm do LLM e do banco, então são
+      exibidas como texto puro (`st.text`). Não viram markdown, LaTeX, link nem imagem, nem mesmo
+      uma URL solta.
+    - **Aviso de não respondida:** o `st.warning` sempre interpreta markdown, então toda
+      pontuação ASCII é escapada (`escapar`).
+    - **Fontes:** são constante do agente e ficam em markdown, para virar link.
+    - **HTML:** continua desligado.
 11. **RN11 — Estado:** a última execução (pergunta, passos, evento final) fica em
     `st.session_state`. Reexecuções sem envio redesenham dali, sem chamar a API.
 
@@ -135,7 +141,8 @@ Scenario: E3 — Resposta não respondida vira só aviso
 Scenario: E4 — Valores em reais não viram fórmula
   Given uma Resposta com explicação "MG gastou R$ 10,00 e SP R$ 20,00."
   When a página desenha a resposta
-  Then o markdown exibido contém "R\$ 10,00" e "R\$ 20,00"
+  Then a explicação aparece como texto puro, exatamente igual
+  And nenhum markdown da página contém "R$"
 ```
 
 ```gherkin
@@ -198,6 +205,25 @@ Scenario: X3 — Falha depois de um passo preserva o passo
   And não mostra tabela, SQL nem aviso de fonte
 ```
 
+```gherkin
+Scenario: X4 — Links e imagens vindos do LLM não viram markdown
+  Given uma Resposta respondida com explicação "Veja [o site](http://exemplo.invalid) ![](http://exemplo.invalid/p.png) e http://exemplo.invalid"
+  When a página desenha a resposta
+  Then a explicação aparece como texto puro, exatamente igual
+  And nenhum markdown da página contém "exemplo.invalid"
+  And numa Resposta não respondida com explicação "[clique](http://exemplo.invalid)" o aviso exibe a pontuação escapada
+```
+
+### Comportamentos conhecidos
+
+- **Envio durante uma pergunta em andamento:** clicar numa pergunta de exemplo (ou enviar o
+  formulário) reexecuta a página e interrompe a pergunta atual na tela. A API termina a anterior e
+  grava o JSONL (STORY-004, D6). Expandir o status, mexer no gráfico ou digitar no campo não
+  reexecuta a página.
+- **Só nesta máquina:** `.streamlit/config.toml` limita a demo a `localhost` e desliga a
+  telemetria do Streamlit (execução local, Constituição §1). Vale quando o `streamlit run` é
+  chamado na raiz do repositório.
+
 ---
 
 ## Checklist de Qualidade
@@ -214,6 +240,7 @@ Scenario: X3 — Falha depois de um passo preserva o passo
   - CA4 → H3, H4, E2, E4
   - CA5 → E3
   - CA6 → X1, X3
+  - P1/P2 (texto não confiável) → E4, X4
   - CA7 → E7
   - CA8 → H1, H2, E1, X1 (cliente sem Streamlit)
   - CA9 → E5

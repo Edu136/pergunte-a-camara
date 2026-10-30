@@ -67,7 +67,7 @@ Task 1 → Task 2 → Task 3 → Task 4 → Task 5
 
 - Total: 5 tasks
 - Concluídas: 5/5
-- Cenários BDD cobertos: 16/16 (H1–H6, E1–E7, X1–X3; outlines contam como 1)
+- Cenários BDD cobertos: 17/17 (H1–H6, E1–E7, X1–X4; outlines contam como 1)
 
 | Cenário | Teste |
 |---|---|
@@ -87,6 +87,7 @@ Task 1 → Task 2 → Task 3 → Task 4 → Task 5
 | X1 | `tests/test_api_cliente.py::test_x1_falhas_viram_uma_unica_falha_amigavel` (8 casos) e `test_x1_mensagem_de_api_fora_cita_o_endereco` |
 | X2 | `tests/test_demo.py::test_x2_pergunta_invalida_e_barrada_na_pagina` |
 | X3 | `tests/test_demo.py::test_x3_falha_depois_de_um_passo_preserva_o_passo` |
+| X4 | `tests/test_demo.py::test_x4_links_e_imagens_do_llm_nao_viram_markdown` e `test_x4_aviso_nao_respondido_escapa_links` (adicionado no /review) |
 
 ## Notas do Sync
 
@@ -107,8 +108,21 @@ Task 1 → Task 2 → Task 3 → Task 4 → Task 5
     - duas consultas ❌ por timeout de 5 s e a terceira ✅, ou seja, a autocorreção apareceu
       passo a passo;
     - gráfico de barras e tabela com `R$ 102.059.920,94` (pt-BR);
-    - explicação com `R\$` escapado, SQL, fonte e aviso de fonte oficial.
+    - explicação com o `R$` intacto, SQL, fonte e aviso de fonte oficial.
   - O tempo real visual (passos surgindo um a um no navegador) fica para a conferência do autor.
+
+## Correções do /review
+
+- **A05 — demo exposta na rede:** o `streamlit run` escutava em todas as interfaces (o log
+  mostrava `Network URL` e `External URL`), e qualquer pessoa na rede usaria o agente pela demo.
+  Além disso, a telemetria do Streamlit vinha ligada. Agora `.streamlit/config.toml` define
+  `server.address = "localhost"` e `gatherUsageStats = false`.
+- **A03 — texto do LLM como markdown:** só o `$` era escapado; links, imagens (o navegador
+  buscaria a URL) e URLs soltas na explicação viravam conteúdo ativo. Explicação e linhas dos
+  passos passaram para `st.text` (texto puro). O aviso de não respondida escapa toda a
+  pontuação ASCII. RN10 reescrita, E4 ajustado e X4 adicionado.
+- **`# noqa: E402` ×5** trocados por `per-file-ignores` para `app/*.py` no `pyproject.toml`.
+- **Envio durante pergunta em andamento** registrado na spec como comportamento conhecido.
 
 ## Pendências (não bloqueantes, de outras stories)
 
