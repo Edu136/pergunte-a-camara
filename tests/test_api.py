@@ -1,5 +1,6 @@
 """API POST /perguntar ponta a ponta (STORY-004), com o agente real e LLM/banco falsos."""
 
+import inspect
 from pathlib import Path
 
 import pytest
@@ -15,7 +16,7 @@ from src.agent.agente import (
     Agente,
 )
 from src.agent.registro import RegistroJSONL
-from src.api.main import ERRO_INESPERADO, app, obter_agente
+from src.api.main import ERRO_INESPERADO, app, health, obter_agente
 from src.config import settings
 from src.llm.cliente import LLMIndisponivel
 from src.schemas import PassoAgente, Resposta
@@ -47,6 +48,10 @@ def test_health(cliente):
     resposta = cliente.get("/health")
     assert resposta.status_code == 200
     assert resposta.json() == {"status": "ok"}
+
+
+def test_e5_health_nao_depende_do_threadpool_dos_streams():
+    assert inspect.iscoroutinefunction(health)
 
 
 # --- Happy path ---------------------------------------------------------------------------
@@ -82,24 +87,24 @@ def test_h5_agente_da_api_grava_o_jsonl():
 # --- Edge cases ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize(
-    ("llm", "consultor", "limites", "passos_falhos", "mensagem"),
+    ("roteiro", "resultados", "limites", "passos_falhos", "mensagem"),
     [
-        pytest.param(LLMRoteirizado(texto("Não sei.")), ConsultorFalso(), {}, 0, SEM_DADOS,
-                     id="sem-consulta"),
-        pytest.param(LLMRoteirizado(LLMIndisponivel("fora")), ConsultorFalso(), {}, 0, LLM_FORA,
-                     id="llm-fora"),
-        pytest.param(LLMRoteirizado(sql(SQL_UF)), ConsultorFalso(BancoIndisponivel("fora")), {},
-                     1, BANCO_FORA, id="banco-fora"),
-        pytest.param(LLMRoteirizado(*[sql(SQL_UF)] * 3), ConsultorFalso(*[LINHAS_UF] * 3),
-                     {"agente_max_passos": 2}, 0, LIMITE_PASSOS, id="limite-de-passos"),
-        pytest.param(LLMRoteirizado(*[sql(SQL_PROIBIDO)] * 3), ConsultorFalso(),
-                     {"agente_max_correcoes": 2}, 3, CORRECOES_ESGOTADAS, id="correcoes"),
+        pytest.param([texto("Não sei.")], [], {}, 0, SEM_DADOS, id="sem-consulta"),
+        pytest.param([LLMIndisponivel("fora")], [], {}, 0, LLM_FORA, id="llm-fora"),
+        pytest.param([sql(SQL_UF)], [BancoIndisponivel("fora")], {}, 1, BANCO_FORA,
+                     id="banco-fora"),
+        pytest.param([sql(SQL_UF)] * 3, [LINHAS_UF] * 3, {"agente_max_passos": 2}, 0,
+                     LIMITE_PASSOS, id="limite-de-passos"),
+        pytest.param([sql(SQL_PROIBIDO)] * 3, [], {"agente_max_correcoes": 2}, 3,
+                     CORRECOES_ESGOTADAS, id="correcoes"),
     ],
 )
 def test_e1_recusas_e_falhas_terminam_com_resposta_nao_respondida(
-    cliente, llm, consultor, limites, passos_falhos, mensagem
+    cliente, roteiro, resultados, limites, passos_falhos, mensagem
 ):
-    usar(Agente(llm=llm, consultor=consultor, config=config(**limites)))
+    # Os falsos guardam estado: são criados a cada execução, não na coleta dos parâmetros.
+    usar(Agente(llm=LLMRoteirizado(*roteiro), consultor=ConsultorFalso(*resultados),
+                config=config(**limites)))
 
     http, eventos = perguntar(cliente)
 

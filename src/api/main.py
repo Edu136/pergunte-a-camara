@@ -88,5 +88,6 @@ def perguntar(
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
+async def health() -> dict[str, str]:
+    """Roda no event loop, fora do threadpool ocupado pelos streams abertos."""
     return {"status": "ok"}

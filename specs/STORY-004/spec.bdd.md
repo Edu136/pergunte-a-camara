@@ -1,7 +1,7 @@
 # Spec BDD: STORY-004 — API `POST /perguntar` com os passos do agente em tempo real (SSE)
 
 > **Story**: [story.md](story.md) · **Análise**: [analysis.md](analysis.md) · **Fluxo**: [blueprint.mermaid](blueprint.mermaid)
-> **Status**: Approved (sincronizada após TDD; /review pendente)
+> **Status**: Approved (sincronizada após TDD e /review)
 > **Autor**: Edu136
 > **Revisores**: —
 
@@ -27,13 +27,16 @@ acontecer.
 5. **RN5 — Erro inesperado:** uma exceção não prevista vira o evento `erro` com a mensagem fixa
    `"Erro inesperado ao processar a pergunta."`, sem stack trace, SQL ou texto da exceção. O
    detalhe vai para o log do servidor (`log.exception`).
+   Fora da RN5: se a montagem do agente falhar (ex.: `LLM_PROVIDER` não implementado), a API
+   devolve `500` genérico do Starlette, sem stream; o detalhe fica só no log do servidor.
 6. **RN6 — Agente da API:** uma única instância (`obter_agente`, com cache), montada com o LLM e o
    consultor de leitura da config e com `RegistroJSONL(AGENTE_LOG_PATH)`. Os testes a substituem
    por dependency override.
 7. **RN7 — Headers:** `Content-Type: text/event-stream`, `Cache-Control: no-cache` e
    `X-Accel-Buffering: no`.
 8. **RN8 — Execução:** o agente roda numa thread separada da que consome os eventos, e o gerador
-   de eventos é síncrono (iterado no threadpool), então o event loop fica livre.
+   de eventos é síncrono (iterado no threadpool), então o event loop fica livre. O `/health` é
+   `async`: roda no event loop e não disputa o threadpool com os streams abertos.
 9. **RN9 — Aviso de passo:** `Agente.responder(pergunta, ao_passo=None)` chama `ao_passo(passo)`
    para cada passo, logo depois de registrá-lo no JSONL. Sem `ao_passo`, o comportamento é o de
    antes.
@@ -127,6 +130,7 @@ Scenario: E5 — Agente roda fora da thread que consome os eventos
   When os eventos são consumidos até o fim
   Then a thread anotada é diferente da thread que consumiu os eventos
   And o gerador de eventos é um gerador síncrono
+  And o /health é assíncrono (não disputa o threadpool com os streams)
 ```
 
 ### Cenários — Error Cases

@@ -68,7 +68,7 @@ Task 1 → Task 2 → Task 3 → Task 4
 | E2 | `tests/test_api_eventos.py::test_e2_acentos_intactos_e_data_numa_linha` |
 | E3 | testes das STORY-001 a 003 (`tests/test_agente*.py`), inalterados e verdes |
 | E4 | `tests/test_api.py::test_e4_uma_unica_instancia_do_agente` |
-| E5 | `tests/test_api_eventos.py::test_e5_agente_roda_fora_da_thread_que_consome` |
+| E5 | `tests/test_api_eventos.py::test_e5_agente_roda_fora_da_thread_que_consome` e `tests/test_api.py::test_e5_health_nao_depende_do_threadpool_dos_streams` |
 | X1 | `tests/test_api.py::test_x1_corpo_invalido_e_barrado_antes_do_agente` (3 casos) e `test_x1_json_malformado_e_barrado` |
 | X2 | `tests/test_api_eventos.py::test_x2_excecao_depois_de_um_passo_vira_erro_generico` |
 | X3 | `tests/test_api_eventos.py::test_x3_excecao_antes_de_qualquer_passo` e `tests/test_api.py::test_x2_x3_excecao_inesperada_vira_evento_erro` |
@@ -90,7 +90,20 @@ Task 1 → Task 2 → Task 3 → Task 4
   não escuta, e a recusa demora cerca de 2 s. O exemplo do README já usa `127.0.0.1`.
 - Blueprint confere com o fluxo implementado; sem alteração.
 
+## Correções do /review
+
+- **`/health` assíncrono:** era `def` e rodava no threadpool, onde cada stream aberto ocupa um
+  worker parado em `fila.get()` (limite padrão do anyio: 40). Com muitas perguntas abertas, o
+  `/health` deixaria de responder (CA9). Agora é `async def` e roda no event loop (RN8, E5).
+- **Falsos do E1 criados a cada execução:** eram instanciados na coleta dos parâmetros e guardam
+  estado (o roteiro é consumido). Rerun ou `--lf` quebrariam o teste com `IndexError`.
+- **Falha ao montar o agente:** responde `500` genérico do Starlette, sem stream; registrado na
+  spec como comportamento conhecido, fora da RN5. Sem mudança de código.
+
 ## Pendências (não bloqueantes, de outras stories)
+
+- [ ] Pergunta só com espaços (`"     "`) passa no `min_length=5` de `Pergunta` e chega ao agente.
+      Mudar o contrato da STORY-001; resolver junto com o guardrail de entrada (bloco 4).
 
 - [ ] "Gastos por UF" virou `tabela`: 28 linhas > `GRAFICO_MAX_BARRAS` (20). É a comparação mais
       comum da demo; avaliar subir o limite para cobrir as UFs (regra da STORY-003).
