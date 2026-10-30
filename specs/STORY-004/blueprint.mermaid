@@ -1,0 +1,44 @@
+%% STORY-004 — POST /perguntar com os passos do agente em tempo real (SSE)
+%% Agente síncrono numa thread; ponte por queue.Queue; gerador síncrono iterado no threadpool (CA9)
+
+sequenceDiagram
+    autonumber
+    actor C as Cliente (demo / curl)
+    participant API as FastAPI POST /perguntar
+    participant E as eventos() (gerador, threadpool)
+    participant F as queue.Queue
+    participant T as Thread do agente
+    participant A as Agente.responder(ao_passo)
+    participant R as Registro JSONL
+
+    C->>API: POST {"texto": "..."}
+    alt corpo inválido (sem texto, < 5 ou > 500 caracteres)
+        API-->>C: 422 (Pergunta do Pydantic), sem stream e sem chamar o agente
+    else válido
+        API->>E: StreamingResponse(eventos(agente, texto), text/event-stream)
+        E->>T: start (daemon)
+        T->>A: responder(texto, ao_passo=fila.put)
+        loop cada passo concluído (ferramenta ou gerar_grafico)
+            A->>R: registrar(passo)
+            A->>F: ao_passo(passo)
+            F-->>E: passo
+            E-->>C: event: passo / data: PassoAgente
+        end
+        alt fim normal (inclusive respondida=false: LLM/banco fora, limites, sem dados)
+            A-->>T: Resposta
+            T->>F: (finally) item final: resposta
+            F-->>E: resposta
+            E-->>C: event: resposta / data: Resposta (passos = os já enviados)
+        else exceção não prevista
+            A-->>T: exceção
+            Note over T: log.exception com o detalhe completo
+            T->>F: (finally) item final: erro
+            F-->>E: erro
+            E-->>C: event: erro / data: {"mensagem": genérica}
+        end
+        Note over E,C: stream encerrado após o item final
+    end
+
+    opt cliente desconecta no meio
+        Note over T,R: a thread segue até o fim e grava o JSONL; os eventos são descartados
+    end
