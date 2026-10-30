@@ -8,11 +8,18 @@ import logging
 import queue
 import threading
 from collections.abc import Callable, Iterator
-from typing import Protocol
+from functools import lru_cache
+from typing import Annotated, Protocol
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
+from fastapi.responses import StreamingResponse
 
-from src.schemas import PassoAgente, Resposta
+from src.agent.agente import Agente
+from src.agent.registro import RegistroJSONL
+from src.config import settings
+from src.llm.cliente import criar_cliente
+from src.schemas import PassoAgente, Pergunta, Resposta
+from src.tools.consultar_sql import ConsultorSQL
 
 log = logging.getLogger(__name__)
 
@@ -56,6 +63,28 @@ def eventos(agente: Respondedor, texto: str) -> Iterator[str]:
         yield _sse(evento, dados)
         if evento != "passo":
             return
+
+
+@lru_cache
+def obter_agente() -> Agente:
+    """Instância única: o cache de categorias do agente vale entre perguntas."""
+    return Agente(
+        llm=criar_cliente(settings),
+        consultor=ConsultorSQL(),
+        config=settings,
+        registro=RegistroJSONL(settings.agente_log_path),
+    )
+
+
+@app.post("/perguntar")
+def perguntar(
+    pergunta: Pergunta, agente: Annotated[Respondedor, Depends(obter_agente)]
+) -> StreamingResponse:
+    return StreamingResponse(
+        eventos(agente, pergunta.texto),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @app.get("/health")
