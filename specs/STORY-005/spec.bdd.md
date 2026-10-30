@@ -1,7 +1,7 @@
 # Spec BDD: STORY-005 — Demo em Streamlit com os passos do agente em tempo real
 
 > **Story**: [story.md](story.md) · **Análise**: [analysis.md](analysis.md) · **Fluxo**: [blueprint.mermaid](blueprint.mermaid)
-> **Status**: Draft
+> **Status**: Approved (sincronizada após TDD; /review pendente)
 > **Autor**: Edu136
 > **Revisores**: —
 
