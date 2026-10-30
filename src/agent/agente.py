@@ -5,6 +5,7 @@ delimitado, até a resposta final. Regras em specs/STORY-001/spec.bdd.md e fluxo
 import logging
 import time
 import uuid
+from collections.abc import Callable
 from typing import Any, Protocol
 
 from src.agent.prompts import FERRAMENTAS, formatar_dados, montar_prompt_sistema
@@ -57,7 +58,10 @@ class Agente:
         self.registro = registro
         self._categorias: list[str] | None = None
 
-    def responder(self, pergunta: str) -> Resposta:
+    def responder(
+        self, pergunta: str, ao_passo: Callable[[PassoAgente], None] | None = None
+    ) -> Resposta:
+        """Responde a pergunta. ao_passo é avisado de cada passo assim que ele é registrado."""
         id_pergunta = uuid.uuid4().hex
         mensagens: list[dict[str, Any]] = [
             {"role": "system", "content": montar_prompt_sistema(self._listar_categorias())},
@@ -66,6 +70,13 @@ class Agente:
         passos: list[PassoAgente] = []
         ultimo_sucesso: ResultadoConsulta | None = None
         falhas_seguidas = 0
+
+        def anotar(passo: PassoAgente) -> None:
+            passos.append(passo)
+            if self.registro:
+                self.registro.registrar(id_pergunta, pergunta, passo)
+            if ao_passo:
+                ao_passo(passo)
 
         def nao_respondida(explicacao: str) -> Resposta:
             return Resposta(
@@ -83,9 +94,7 @@ class Agente:
                 if ultimo_sucesso is None:
                     return nao_respondida(SEM_DADOS)
                 grafico, passo = self._escolher_grafico(ultimo_sucesso.linhas)
-                passos.append(passo)
-                if self.registro:
-                    self.registro.registrar(id_pergunta, pergunta, passo)
+                anotar(passo)
                 return Resposta(
                     pergunta=pergunta,
                     sql=ultimo_sucesso.sql,
@@ -109,9 +118,7 @@ class Agente:
                     return nao_respondida(LIMITE_PASSOS)
 
                 passo, resultado, conteudo = self._executar(chamada)
-                passos.append(passo)
-                if self.registro:
-                    self.registro.registrar(id_pergunta, pergunta, passo)
+                anotar(passo)
                 if conteudo is None:
                     return nao_respondida(BANCO_FORA)
                 mensagens.append({"role": "tool", "tool_name": chamada.nome, "content": conteudo})

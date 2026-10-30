@@ -27,7 +27,8 @@ um gráfico e uma explicação, com cada passo do raciocínio do agente visível
 ## 4. Fluxo
 
 1. O agente lê a pergunta e decide quais ferramentas usar (máx. `AGENTE_MAX_PASSOS` passos).
-2. Cada chamada de ferramenta vira um `PassoAgente`, exibido em tempo real.
+2. Cada chamada de ferramenta vira um `PassoAgente`, exibido em tempo real: a API
+   `POST /perguntar` envia cada passo por SSE assim que ele termina — [STORY-004](STORY-004/spec.bdd.md).
 3. Se o SQL falhar na validação ou na execução, o agente recebe o erro e tenta corrigir
    (até 2 tentativas).
 4. A resposta final segue o contrato `Resposta` de `src/schemas.py`.

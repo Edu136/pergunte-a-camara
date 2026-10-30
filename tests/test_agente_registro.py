@@ -37,3 +37,26 @@ def test_registro_acrescenta_sem_apagar(tmp_path):
     linhas = [json.loads(linha) for linha in caminho.read_text(encoding="utf-8").splitlines()]
     assert [linha["pergunta"] for linha in linhas if linha["ferramenta"] == "consultar_sql"] == [
         "Pergunta um", "Pergunta dois"]
+
+
+class RegistroEmMemoria:
+    def __init__(self, eventos):
+        self.eventos = eventos
+
+    def registrar(self, id_pergunta, pergunta, passo):
+        self.eventos.append(("registrado", passo))
+
+
+def test_h4_agente_avisa_cada_passo_depois_de_registrar():
+    eventos = []
+    llm = LLMRoteirizado(sql(SQL_UF), texto("Pronto."))
+    agente = Agente(llm=llm, consultor=ConsultorFalso([]), config=Settings(_env_file=None),
+                    registro=RegistroEmMemoria(eventos))
+
+    resposta = agente.responder("Quanto por UF?", ao_passo=lambda p: eventos.append(("avisado", p)))
+
+    avisados = [passo for tipo, passo in eventos if tipo == "avisado"]
+    assert avisados == resposta.passos
+    assert [p.ferramenta for p in avisados] == ["consultar_sql", "gerar_grafico"]
+    for passo in avisados:
+        assert eventos.index(("registrado", passo)) < eventos.index(("avisado", passo))
