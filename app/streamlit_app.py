@@ -14,7 +14,8 @@ import streamlit as st  # noqa: E402
 from pydantic import ValidationError  # noqa: E402
 
 from src.api import cliente  # noqa: E402
-from src.schemas import PassoAgente, Pergunta  # noqa: E402
+from src.schemas import Grafico, PassoAgente, Pergunta, Resposta  # noqa: E402
+from src.tools.grafico import TITULO_TABELA, montar_figura  # noqa: E402
 
 PERGUNTAS_EXEMPLO = [
     "Quanto foi gasto por UF em 2025?",
@@ -23,6 +24,7 @@ PERGUNTAS_EXEMPLO = [
     "Quanto foi gasto no total em 2024?",
 ]
 PERGUNTA_INVALIDA = "A pergunta precisa ter entre 5 e 500 caracteres."
+AVISO_FONTE = "Verifique na fonte oficial antes de usar estes números."
 EM_ANDAMENTO = "Consultando os dados…"
 CONCLUIDO = "Concluído"
 NAO_CONCLUIDO = "Não foi possível concluir"
@@ -46,19 +48,60 @@ def desenhar_passo(passo: PassoAgente) -> None:
         st.code(sql, language="sql")
 
 
+def situacao(final: cliente.Evento) -> dict[str, str]:
+    if isinstance(final, cliente.RespostaRecebida):
+        return {"label": CONCLUIDO, "state": "complete"}
+    return {"label": NAO_CONCLUIDO, "state": "error"}
+
+
+def desenhar_resposta(resposta: Resposta) -> None:
+    if not resposta.respondida:
+        st.warning(escapar(resposta.explicacao))
+        return
+    st.markdown(escapar(resposta.explicacao))
+    grafico = resposta.grafico
+    if grafico and grafico.tipo in ("linha", "barra"):
+        st.plotly_chart(montar_figura(grafico, resposta.dados))
+    if resposta.dados:
+        colunas = list(resposta.dados[0])
+        tabela = Grafico(tipo="tabela", eixo_x=colunas[0], eixo_y=colunas[0], titulo=TITULO_TABELA)
+        st.plotly_chart(montar_figura(tabela, resposta.dados))
+    if resposta.sql:
+        st.code(resposta.sql, language="sql")
+    for fonte in resposta.fontes:
+        st.markdown(f"Fonte: {escapar(fonte)}")
+    st.info(AVISO_FONTE)
+
+
+def desenhar_final(final: cliente.Evento) -> None:
+    if isinstance(final, cliente.RespostaRecebida):
+        desenhar_resposta(final.resposta)
+    elif isinstance(final, cliente.Falha):
+        st.error(final.mensagem)
+
+
 def executar(texto: str) -> None:
+    """Desenha os passos assim que chegam e guarda a execução para as próximas reexecuções."""
+    passos: list[PassoAgente] = []
     final = None
     with st.status(EM_ANDAMENTO, expanded=True) as status:
         for evento in cliente.perguntar(texto):
             if isinstance(evento, cliente.PassoRecebido):
+                passos.append(evento.passo)
                 desenhar_passo(evento.passo)
             else:
                 final = evento
-        concluiu = isinstance(final, cliente.RespostaRecebida)
-        status.update(
-            label=CONCLUIDO if concluiu else NAO_CONCLUIDO,
-            state="complete" if concluiu else "error",
-        )
+        status.update(**situacao(final), expanded=False)
+    st.session_state["ultima"] = {"passos": passos, "final": final}
+    desenhar_final(final)
+
+
+def redesenhar(ultima: dict) -> None:
+    """Reexecução sem envio: mostra a última execução salva, sem chamar a API."""
+    with st.status(**situacao(ultima["final"]), expanded=False):
+        for passo in ultima["passos"]:
+            desenhar_passo(passo)
+    desenhar_final(ultima["final"])
 
 
 def enviar_exemplo() -> None:
@@ -87,3 +130,5 @@ if enviada is not None:
         st.warning(PERGUNTA_INVALIDA)
     else:
         executar(enviada)
+elif "ultima" in st.session_state:
+    redesenhar(st.session_state["ultima"])
