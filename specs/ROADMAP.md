@@ -19,7 +19,7 @@
 
 ## 3. Avaliação (vem antes das demais capacidades de IA)
 
-- [ ] **Conjunto de avaliação** com perguntas rotuladas por categoria: fácil, média, difícil, fora do escopo, pedido de opinião, tentativa de injection.
+- [x] **Conjunto de avaliação** com perguntas rotuladas por categoria: fácil, média, difícil, fora do escopo, pedido de opinião, tentativa de injection. → [STORY-006](STORY-006/spec.bdd.md)
 - [ ] **Harness de avaliação**: acurácia de execução do SQL, taxa de recusa correta, bloqueio de injection ponta a ponta, latência e passos por pergunta.
 - [ ] **Comparação de modelos**: `qwen2.5:7b`, `qwen2.5-coder:7b` e, opcionalmente, `gpt-4o-mini` como referência de teto.
 - [ ] **Análise de erros** publicada: onde e por que cada modelo erra.

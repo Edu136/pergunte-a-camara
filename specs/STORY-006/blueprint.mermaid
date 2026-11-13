@@ -1,0 +1,29 @@
+%% STORY-006 — Conjunto de avaliação: validação no CI (sem banco) e do gabarito (com banco)
+flowchart TD
+    A[experiments/conjunto_avaliacao.json] --> B[carregar_conjunto<br/>src/eval/conjunto.py]
+    B -->|JSON inválido, item inválido,<br/>id repetido, categoria x respondida| E1[ConjuntoInvalido<br/>mensagem com o id]
+    B --> C[ConjuntoAvaliacao]
+
+    subgraph CI [pytest no CI — sem banco]
+        C --> T1[schema + mínimo de 5 por categoria]
+        C --> T2[sql_guard aceita todo gabarito]
+        C --> T3[regra de dificuldade pelo SQL]
+        C --> T4[vazamento: PERGUNTAS_EXEMPLO e PROMPT_SISTEMA]
+    end
+
+    subgraph CA5 [python -m src.eval.validar_gabarito — banco carregado]
+        C --> V1[para cada item respondível]
+        V1 --> V2[validar_categorias<br/>categorias do banco]
+        V2 --> V3[ConsultorSQL.consultar<br/>agente_leitura, READ ONLY, timeout]
+        V3 --> V4{ao menos 1 linha<br/>com valor não nulo?}
+        V4 -->|sim| OK[ok + tempo ms]
+        V4 -->|não| F[falha: sem dados]
+        V2 -->|CategoriaInexistente| F
+        V3 -->|SQLInvalido / ErroExecucaoSQL| F
+        V3 -->|BancoIndisponivel| ABORT[aborta: banco fora do ar]
+        OK --> R[resumo: N ok, M falhas<br/>lista de ids com motivo]
+        F --> R
+        R --> X{falhas?}
+        X -->|sim| EXIT1[exit 1]
+        X -->|não| EXIT0[exit 0]
+    end

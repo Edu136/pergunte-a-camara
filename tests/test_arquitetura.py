@@ -1,11 +1,12 @@
-"""Fitness function FF-004: agente, ferramentas e cliente de LLM só usam a conexão de leitura."""
+"""Fitness function FF-004: agente, ferramentas, cliente de LLM e avaliação só usam a conexão de
+leitura."""
 
 import re
 from pathlib import Path
 
 import pytest
 
-PASTAS_DO_AGENTE = ["src/agent", "src/tools", "src/llm"]
+PASTAS_DO_AGENTE = ["src/agent", "src/tools", "src/llm", "src/eval"]
 CONEXAO_DE_ESCRITA = re.compile(r"database_url(?!_leitura)", re.IGNORECASE)
 
 

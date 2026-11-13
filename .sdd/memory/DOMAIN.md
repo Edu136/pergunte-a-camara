@@ -33,7 +33,7 @@
 
 - Ingestão anual da CEAP: [a definir em /feature] — ver `specs/02-ingestao.md`
 - Pergunta → guardrail de entrada → agente → ferramentas → guardrail de saída → resposta: [a definir em /feature] — ver `specs/01-agente-consultas.md`
-- Avaliação (SQL, guardrails, RAG, comparação de modelos): [a definir em /feature]
+- Avaliação (SQL, guardrails, RAG, comparação de modelos): conjunto rotulado e validação do gabarito em `specs/STORY-006/` (`experiments/conjunto_avaliacao.json`); harness [a definir em /feature]
 - Ingestão e busca em normas (RAG híbrido + reranking): [a definir em /feature]
 - Detecção de anomalias: [a definir em /feature]
 - Ferramentas via servidor MCP: [a definir em /feature]
