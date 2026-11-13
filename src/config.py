@@ -36,6 +36,9 @@ class Settings(BaseSettings):
 
     grafico_max_barras: int = 20
 
+    api_url: str = "http://127.0.0.1:8000"
+    demo_timeout_s: float = 900
+
     @property
     def lista_anos(self) -> list[int]:
         return [int(a) for a in self.anos.split(",") if a.strip()]

@@ -1,0 +1,48 @@
+%% STORY-005 — Demo em Streamlit consumindo POST /perguntar (SSE)
+%% A página só desenha; o cliente (src/api/cliente.py) valida eventos e converte falhas
+
+sequenceDiagram
+    autonumber
+    actor U as Usuário
+    participant P as Página (app/streamlit_app.py)
+    participant S as st.session_state
+    participant C as cliente.perguntar (httpx stream)
+    participant API as API POST /perguntar
+
+    alt reexecução sem envio (expandir, rolar, clicar fora)
+        P->>S: lê "ultima"
+        P-->>U: redesenha passos e resposta salvos, sem chamar a API
+    else envio (formulário ou pergunta de exemplo)
+        U->>P: pergunta
+        alt texto fora de 5–500 caracteres
+            P-->>U: aviso de validação, sem chamar a API
+        else válido
+            P->>P: st.status("Consultando os dados…", running)
+            P->>C: perguntar(texto, API_URL, DEMO_TIMEOUT_S)
+            C->>API: POST {"texto": ...} (connect 5 s, read DEMO_TIMEOUT_S)
+            alt API fora / timeout / status ≠ 200
+                C-->>P: Falha(mensagem amigável)
+            else stream 200
+                loop cada evento SSE (ler_sse)
+                    API-->>C: event: passo
+                    C-->>P: PassoRecebido(PassoAgente)
+                    P->>S: acrescenta o passo
+                    P-->>U: linha do passo no status (+ st.code com o SQL)
+                end
+                alt event: resposta
+                    API-->>C: Resposta
+                    C-->>P: RespostaRecebida
+                else event: erro / stream cortado / JSON inválido
+                    C-->>P: Falha(mensagem amigável)
+                end
+            end
+            P->>S: guarda o evento final
+            alt respondida = true
+                P-->>U: status complete; explicação ($ escapado), gráfico, tabela pt-BR, SQL, fontes, "Verifique na fonte oficial"
+            else respondida = false
+                P-->>U: status complete; st.warning(explicação)
+            else Falha
+                P-->>U: status error; mensagem amigável (passos já desenhados ficam)
+            end
+        end
+    end

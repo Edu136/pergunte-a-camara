@@ -1,0 +1,7 @@
+# Execução local (Constituição §1): a demo só aceita conexões desta máquina e não envia
+# estatísticas de uso. Vale quando o `streamlit run` é chamado na raiz do repositório.
+[server]
+address = "localhost"
+
+[browser]
+gatherUsageStats = false

@@ -77,16 +77,21 @@ ollama pull qwen2.5:7b
 # 5. Testes
 pytest
 
-# 6. API e demo
+# 6. API e demo (em dois terminais)
 uvicorn src.api.main:app --reload
 streamlit run app/streamlit_app.py
 ```
+
+A demo abre em http://localhost:8501 e conversa com a API em `API_URL` (padrão
+`http://127.0.0.1:8000`). Ela mostra cada passo do agente assim que ele termina e, no fim, a
+explicação, o gráfico, a tabela, o SQL e a fonte. Em CPU, uma pergunta pode levar alguns minutos.
 
 A API responde em `POST /perguntar` e entrega cada passo do agente por Server-Sent Events, seguido
 da resposta final (formato dos eventos em [STORY-004](specs/STORY-004/spec.bdd.md)):
 
 ```bash
-curl -N -X POST http://127.0.0.1:8000/perguntar   -H "content-type: application/json" -d '{"texto": "Quanto foi gasto por UF em 2025?"}'
+curl -N -X POST http://127.0.0.1:8000/perguntar \
+  -H "content-type: application/json" -d '{"texto": "Quanto foi gasto por UF em 2025?"}'
 ```
 
 ## Estrutura
